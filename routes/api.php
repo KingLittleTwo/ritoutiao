@@ -1,6 +1,6 @@
 <?php
 
-use illuminate\http\request;
+use Illuminate\Http\Request;
 
 /*
 |--------------------------------------------------------------------------
@@ -12,10 +12,9 @@ use illuminate\http\request;
 | is assigned the "api" middleware group. enjoy building your api!
 |
 */
-
-route::middleware('auth:api')->get('/user', function (request $request) {
+Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-route::resource('/nav', 'Api\NavController');
-route::resource('/post', 'Api\PostController');
+Route::resource('/nav', 'Api\NavController');
+Route::resource('/post', 'Api\PostController');
