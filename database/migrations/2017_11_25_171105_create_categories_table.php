@@ -23,7 +23,7 @@ class CreateCategoriesTable extends Migration
             $table->increments('id');
             $table->string('cat', 20);
             $table->string('cat_name', 20)->comments('中文名');
-            $table->enum('is_nav', [1, 0])->comments('是否导航 1：是，0：否');
+            $table->enum('is_nav', [1, 0])->default(1)->comments('是否导航 1：是，0：否');
             $table->integer('operate_id');
             $table->timestamps();
         });

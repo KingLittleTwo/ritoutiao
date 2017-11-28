@@ -11,6 +11,11 @@ use Mockery\Exception;
 class CategoryController extends Controller
 {
     private $table = 'categories';
+    private $user_info = [];
+    public function __construct()
+    {
+        $this->user_info = session('user_info');
+    }
 
     /**
      * Display a listing of the resource.
@@ -48,12 +53,16 @@ class CategoryController extends Controller
      */
     public function store(Request $request)
     {
+        if (empty($this->user_info))
+            Message::jsonMsg(500, 'you must be signin');
         if (empty($request))
             Message::jsonMsg(500, 'please input your category info');
 
         $condition = [
             'cat' => $request['cat'],
             'cat_name' => $request['cat_name'],
+            'is_nav' => $request['is_nav'],
+            'operate_id' => 1,
             'created_at' => date('Y-m-d H:i:s', time()),
             'updated_at' => date('Y-m-d H:i:s', time())
         ];
@@ -108,6 +117,8 @@ class CategoryController extends Controller
      */
     public function update(Request $request, $id)
     {
+        if (empty($this->user_info))
+            Message::jsonMsg(500, 'you must be signin');
         if (!is_numeric($id))
             Message::jsonMsg(500, 'id must be a number');
 
@@ -115,6 +126,13 @@ class CategoryController extends Controller
             Message::jsonMsg(500, 'nothing to update');
 
         try {
+            $cat = DB::table($this->table)
+                ->select('operate_id')
+                ->where('id', $id)
+                ->first();
+            if ($cat->operate_id != $this->user_info->author_id)
+                Message::jsonMsg(500, 'only the autor can edit the cat');
+
             $condition['updated_at'] = date('Y-m-d H:i:s', time());
 
             if (!empty($request['cat']))
@@ -140,6 +158,8 @@ class CategoryController extends Controller
      */
     public function destroy($id)
     {
+        if (empty(session('user_info')))
+            Message::jsonMsg(500, 'you must be signin');
         if (!is_numeric($id))
             Message::jsonMsg(500, 'id must be a number');
         try {
