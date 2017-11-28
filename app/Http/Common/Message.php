@@ -17,6 +17,7 @@ class Message
             'code' => $code,
             'data' => $data
         ]);
+        die;
     }
 
 }

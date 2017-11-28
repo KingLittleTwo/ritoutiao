@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Common\Message;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
@@ -19,7 +20,7 @@ class UserController extends Controller
         $user_info = DB::table($this->table)
             ->where('email', $request['email'])
             ->first();
-        if (encrypt($request['password'] == $user_info->password))
+        if (decrypt($request['password'] == $user_info->password))
         {
             session('user_info', [
                 'id' => $user_info->id,
@@ -40,9 +41,14 @@ class UserController extends Controller
         if (empty($request['password']))
             Message::jsonMsg(500, 'please input your password');
         if (empty($request['name']))
-            Message::jsonMsg(500, 'please input your email');
+            Message::jsonMsg(500, 'please input your name');
+        $data = [
+            'email' => $request->email,
+            'password' => encrypt($request->password),
+            'name' => $request->name,
+        ];
         $id = DB::table($this->table)
-            ->insertGetId($request);
+            ->insertGetId($data);
         if (empty($id))
             Message::jsonMsg(500, 'failed');
         Message::jsonMsg(200, true);
