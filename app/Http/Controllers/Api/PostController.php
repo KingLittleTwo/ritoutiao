@@ -14,7 +14,6 @@ class PostController extends Controller
     private $user_info = [];
     public function __construct()
     {
-        parent::__construct;
         $this->user_info = session('user_info');
     }
 
