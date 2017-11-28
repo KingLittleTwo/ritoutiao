@@ -16,5 +16,9 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-Route::resource('/nav', 'Api\NavController');
+Route::resource('/cat', 'Api\CategoryController');
 Route::resource('/post', 'Api\PostController');
+
+Route::post('/user/signin', 'Api\UserController@signIn');
+Route::post('/user/signup', 'Api\UserController@signUp');
+Route::post('/user/signout', 'Api\UserController@signOut');

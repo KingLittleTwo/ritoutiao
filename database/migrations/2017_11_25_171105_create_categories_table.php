@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
-class CreateNavsTable extends Migration
+class CreateCategoriesTable extends Migration
 {
     /**
      * Run the migrations.
@@ -19,10 +19,12 @@ class CreateNavsTable extends Migration
      */
     public function up()
     {
-        Schema::create('navs', function (Blueprint $table) {
+        Schema::create('categories', function (Blueprint $table) {
             $table->increments('id');
-            $table->string('nav', 20);
-            $table->string('nav_name', 20)->comments('中文名');
+            $table->string('cat', 20);
+            $table->string('cat_name', 20)->comments('中文名');
+            $table->enum('is_nav', [1, 0])->comments('是否导航 1：是，0：否');
+            $table->integer('operate_id');
             $table->timestamps();
         });
     }

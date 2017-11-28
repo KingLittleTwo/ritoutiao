@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Common\Message;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
@@ -10,6 +11,12 @@ use Mockery\Exception;
 class PostController extends Controller
 {
     private $table = 'posts';
+    private $user_info = [];
+    public function __construct()
+    {
+        parent::__construct;
+        $this->user_info = session('user_info');
+    }
 
     /**
      * Display a listing of the resource.
@@ -18,22 +25,15 @@ class PostController extends Controller
      */
     public function index()
     {
-        $result = [
-            'code' => 500,
-            'msg' => 'failed'
-        ];
         try {
-            $nav = DB::table($this->table)
+            $posts = DB::table($this->table)
                 ->get();
-            if (!empty($nav))
-                $result = [
-                    'code' => 200,
-                    'data' => $nav
-                ];
-        } catch (Exception $e) {
+            if (!empty($posts))
+                Message::jsonMsg(200, $posts);
 
+        } catch (Exception $e) {
+            Message::jsonMsg(500, 'failed');
         }
-        echo json_encode($result);
 
     }
 
@@ -55,33 +55,33 @@ class PostController extends Controller
      */
     public function store(Request $request)
     {
-        if (empty($request))
-            echo json_encode([
-                'code' => 500,
-                'msg' => 'please input your nav'
-            ]);
+        if (empty($this->user_info))
+            Message::jsonMsg(500, 'you must be signin');
+
+        if (empty($request['title']))
+            Message::jsonMsg(500, 'please input the title');
+        if (empty($request['cat_id']))
+            Message::jsonMsg(500, 'please input the cat_id');
+        if (empty($request['content']))
+            Message::jsonMsg(500, 'please input the content');
+        if (empty($request['author_id']))
+            Message::jsonMsg(500, 'please input the author_id');
 
         $condition = [
             'title' => $request['title'],
-            'category_id' => $request['category_id'],
+            'category_id' => $request['cat_id'],
             'content' => $request['content'],
-            'user_id' => $request['user_id'],
-            'tag_id'  => $request['tag_id'],
+            'author_id' => $this->user_info->author_id,
+            'tag_id' => !empty($request['tag_id']) ? implode(',', $request['tag_id']) : '',
             'created_at' => date('Y-m-d H:i:s', time()),
             'updated_at' => date('Y-m-d H:i:s', time())
         ];
         $id = DB::table($this->table)
             ->insertGetId($condition);
         if (!empty($id))
-            echo json_encode([
-                'code' => 200,
-                'data' => $id
-            ]);
+            Message::jsonMsg(200, $id);
         else
-            echo json_encode([
-                'code' => 500,
-                'msg' => 'failed'
-            ]);
+            Message::jsonMsg(500, 'failed');
     }
 
     /**
@@ -93,33 +93,19 @@ class PostController extends Controller
     public function show($id)
     {
         if (!is_numeric($id))
-            echo json_encode([
-                'code' => 500,
-                'msg' => 'id must be a number'
-            ]);
+            Message::jsonMsg(500, 'id must be a number');
 
-        $result = [
-            'code' => 500,
-            'msg' => 'failed'
-        ];
         try {
             $nav = DB::table($this->table)
                 ->where('id', $id)
                 ->first();
             if (!empty($nav))
-                $result = [
-                    'code' => 200,
-                    'data' => $nav
-                ];
+                Message::jsonMsg(200, $nav);
             else
-                $result = [
-                    'code' => 202,
-                    'msg' => 'not exists'
-                ];
+                Message::jsonMsg(202, 'not exists');
         } catch (Exception $e) {
-
+            Message::jsonMsg(201, 'failed');
         }
-        echo json_encode($result);
     }
 
     /**
@@ -142,24 +128,27 @@ class PostController extends Controller
      */
     public function update(Request $request, $id)
     {
-        if (!is_numeric($id))
-            echo json_encode([
-                'code' => 500,
-                'msg' => 'id must be a number'
-            ]);
+        if (empty($this->user_info))
+            Message::jsonMsg(500, 'you must be signin');
 
+        if (!is_numeric($id))
+            Message::jsonMsg(500, 'id must be a number');
         if (empty($request))
-            echo json_encode([
-                'code' => 500,
-                'msg' => 'please input your nav'
-            ]);
+            Message::jsonMsg(500, 'nothing to update');
         try {
+            $post = DB::table($this->table)
+                ->select('author_id')
+                ->where('id', $id)
+                ->first();
+            if ($post->author_id != $this->user_info->author_id)
+                Message::jsonMsg(500, 'only the autor can edit the post');
+
             $condition['updated_at'] = date('Y-m-d H:i:s', time());
 
             if (!empty($request['title']))
                 $condition['title'] = $request['title'];
             if (!empty($request['category_id']))
-                $condition['category_id'] = $request['category_id'];
+                $condition['category_id'] = $request['cat_id'];
             if (!empty($request['content']))
                 $condition['content'] = $request['content'];
             if (!empty($request['tag_id']))
@@ -169,15 +158,9 @@ class PostController extends Controller
                 ->where('id', $id)
                 ->update($condition);
             if ($res)
-                echo json_encode([
-                    'code' => 200,
-                    'data' => true
-                ]);
+                Message::jsonMsg(200, true);
         } catch (Exception $e) {
-            echo json_encode([
-                'code' => 500,
-                'msg' => 'failed'
-            ]);
+            Message::jsonMsg(500, 'failed');
         }
     }
 
@@ -189,26 +172,27 @@ class PostController extends Controller
      */
     public function destroy($id)
     {
-        if (!is_numeric($id))
-            echo json_encode([
-                'code' => 500,
-                'msg' => 'id must be a number'
-            ]);
+        if (empty(session('user_info')))
+            Message::jsonMsg(500, 'you must be signin');
 
+        if (!is_numeric($id))
+            Message::jsonMsg(500, 'id must be a number');
         try {
+            $post = DB::table($this->table)
+                ->select('author_id')
+                ->where('id', $id)
+                ->first();
+            if ($post->author_id != $this->user_info->author_id)
+                Message::jsonMsg(500, 'only the autor can delete the post');
+
             $res = DB::table($this->table)
                 ->where('id', $id)
                 ->delete();
             if ($res)
-                echo json_encode([
-                    'code' => 200,
-                    'data' => true
-                ]);
+                Message::jsonMsg(200, true);
         } catch (Exception $e) {
-            echo json_encode([
-                'code' => 500,
-                'msg' => 'failed'
-            ]);
+            Message::jsonMsg(500, 'failed');
         }
     }
+
 }
