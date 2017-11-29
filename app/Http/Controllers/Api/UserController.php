@@ -6,57 +6,76 @@ use App\Http\Common\Message;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
+use Mockery\Exception;
 
 class UserController extends Controller
 {
     private $table = 'users';
+
     public function signIn(Request $request)
     {
-        if (empty($request['email']))
-            Message::jsonMsg(500, 'please input your email');
-        if (empty($request['password']))
-            Message::jsonMsg(500, 'please input your password');
+        try {
+            if (empty($request['email']))
+                Message::jsonMsg(500, 'please input your email');
+            if (empty($request['password']))
+                Message::jsonMsg(500, 'please input your password');
 
-        $user_info = DB::table($this->table)
-            ->where('email', $request['email'])
-            ->first();
-        if (decrypt($request['password'] == $user_info->password))
-        {
-            session('user_info', [
-                'id' => $user_info->id,
-                'name' => $user_info->name,
-                'avatar_b_url' => $user_info->avatar_b_url,
-                'avatar_m_url' => $user_info->avatar_m_url,
-                'avatar_s_url' => $user_info->avatar_s_url,
-            ]);
-            Message::jsonMsg(200, true);
+            $user_info = DB::table($this->table)
+                ->where('email', $request['email'])
+                ->first();
+            if (decrypt($request['password'] == $user_info->password)) {
+                session('user_info', [
+                    'id' => $user_info->id,
+                    'name' => $user_info->name,
+                    'avatar_b_url' => $user_info->avatar_b_url,
+                    'avatar_m_url' => $user_info->avatar_m_url,
+                    'avatar_s_url' => $user_info->avatar_s_url,
+                ]);
+                Message::jsonMsg(200, true);
+            }
+            Message::jsonMsg(500, 'Username or password is incorrect');
+        } catch (Exception $e) {
+            Message::jsonMsg(500, 'failed');
         }
-        Message::jsonMsg(500, 'Username or password is incorrect');
     }
 
     public function signUp(Request $request)
     {
-        if (empty($request['email']))
-            Message::jsonMsg(500, 'please input your email');
-        if (empty($request['password']))
-            Message::jsonMsg(500, 'please input your password');
-        if (empty($request['name']))
-            Message::jsonMsg(500, 'please input your name');
-        $data = [
-            'email' => $request->email,
-            'password' => encrypt($request->password),
-            'name' => $request->name,
-        ];
-        $id = DB::table($this->table)
-            ->insertGetId($data);
-        if (empty($id))
+        try {
+            if (empty($request['email']))
+                Message::jsonMsg(500, 'please input your email');
+            if (empty($request['password']))
+                Message::jsonMsg(500, 'please input your password');
+            if (empty($request['name']))
+                Message::jsonMsg(500, 'please input your name');
+            $data = [
+                'email' => $request->email,
+                'password' => encrypt($request->password),
+                'name' => $request->name,
+            ];
+            $user = DB::table($this->table)
+                ->where('email', $request->email)
+                ->orWhere('name', $request->name)
+                ->get();
+            if (!empty($user))
+                Message::jsonMsg(500, 'email or name has already there');
+            $id = DB::table($this->table)
+                ->insertGetId($data);
+            if (empty($id))
+                Message::jsonMsg(500, 'failed');
+            Message::jsonMsg(200, true);
+        } catch (Exception $e) {
             Message::jsonMsg(500, 'failed');
-        Message::jsonMsg(200, true);
+        }
     }
 
     public function signOut(Request $request)
     {
-        $request->session()->flush();
-        Message::jsonMsg(200, true);
+        try {
+            $request->session()->flush();
+            Message::jsonMsg(200, true);
+        } catch (Exception $e) {
+            Message::jsonMsg(500, 'failed');
+        }
     }
 }
